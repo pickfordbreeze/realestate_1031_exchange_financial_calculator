@@ -6,22 +6,80 @@
 <title>1031 Exchange Boot + Tax Calculator</title>
 
 <style>
-body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; max-width: 1000px; }
-h1 { font-size: 18px; margin-bottom: 6px; }
-.muted { opacity: 0.7; font-size: 13px; }
-.card { border: 1px solid #ddd; padding: 14px; margin-top: 16px; }
-.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-label { display: block; font-size: 12px; margin-bottom: 6px; opacity: 0.8; }
-input, select { padding: 8px; width: 240px; }
-button { padding: 8px 12px; cursor: pointer; }
+/* ---------- Base ---------- */
+:root{
+  --pad: 14px;
+  --gap: 12px;
+  --border: #ddd;
+  --muted: rgba(0,0,0,.7);
+}
+
+*{ box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  margin: 24px;
+  max-width: 1000px;
+}
+h1 { font-size: 18px; margin: 0 0 6px 0; }
+.muted { opacity: 0.75; font-size: 13px; }
+.card { border: 1px solid var(--border); padding: var(--pad); margin-top: 16px; border-radius: 10px; }
+.row { display: flex; gap: var(--gap); flex-wrap: wrap; align-items: end; }
+label { display: block; font-size: 12px; margin-bottom: 6px; opacity: 0.85; }
+input, select {
+  padding: 10px 12px;
+  width: 240px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px; /* mobile-friendly (prevents tiny iOS zoom issues) */
+}
+button {
+  padding: 10px 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 15px;
+}
+button:active { transform: translateY(1px); }
 table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-th, td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+th, td { border: 1px solid var(--border); padding: 8px; font-size: 13px; vertical-align: middle; }
 th { background: #fafafa; text-align: left; }
 .right { text-align: right; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .small { font-size: 12px; }
 hr { border: none; border-top: 1px solid #eee; margin: 14px 0; }
-.warn { background: #fff7e6; border: 1px solid #ffd591; padding: 10px; margin-top: 10px; }
+
+/* ---------- Mobile responsiveness ---------- */
+@media (max-width: 760px) {
+  body { margin: 14px; }
+
+  .row { gap: 10px; }
+
+  /* Make form fields full width */
+  input, select { width: 100%; }
+
+  /* Put controls into a clean grid */
+  .row > div { flex: 1 1 100%; min-width: 0; }
+
+  /* Buttons full width for easy tapping */
+  button { width: 100%; }
+
+  /* Make tables horizontally scrollable on small screens */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; }
+  table { min-width: 720px; } /* prevents squishing; user can swipe */
+}
+
+/* ---------- Nice touch: sticky results header on mobile ---------- */
+@media (max-width: 760px) {
+  #results strong {
+    display: block;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    padding: 6px 0;
+    z-index: 1;
+  }
+}
 </style>
 </head>
 
@@ -29,93 +87,98 @@ hr { border: none; border-top: 1px solid #eee; margin: 14px 0; }
 
 <h1>1031 Exchange Boot + Tax Calculator</h1>
 <div class="muted">
-Net sale price = Sale Price − Selling Costs.  
+Net sale price = Sale Price − Selling Costs.<br>
 Tax rate fixed at 33%.
 </div>
 
 <div class="card">
 
-<div class="row">
-  <div>
-    <label>Doing a 1031 exchange?</label>
-    <select id="is1031">
-      <option value="yes">Yes (1031)</option>
-      <option value="no">No (Tax Full Gain)</option>
-    </select>
+  <div class="row">
+    <div>
+      <label>Doing a 1031 exchange?</label>
+      <select id="is1031">
+        <option value="yes">Yes (1031)</option>
+        <option value="no">No (Tax Full Gain)</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Sale price</label>
+      <input id="salePrice" class="money-input" value="4,875,000" inputmode="decimal" autocomplete="off">
+    </div>
+
+    <div>
+      <label>Selling costs</label>
+      <input id="sellingCosts" class="money-input" value="50,000" inputmode="decimal" autocomplete="off">
+    </div>
+
+    <div>
+      <label>Adjusted basis - money you bought og house for</label>
+      <input id="adjustedBasis" class="money-input" value="1,650,000" inputmode="decimal" autocomplete="off">
+    </div>
+
+    <div>
+      <label>Mortgage payoff</label>
+      <input id="mortgagePayoff" class="money-input" value="700,000" inputmode="decimal" autocomplete="off">
+    </div>
+
+    <!-- ✅ NEW FEATURE BUTTON + OUTPUT -->
+    <div>
+      <button id="maxBtn" type="button" title="Max purchase price if you buy in cash, pay off old mortgage fully, and end with $0 cash left.">
+        Show maximum purchase
+      </button>
+      <div class="small muted" id="maxOut" style="margin-top:8px;">—</div>
+    </div>
   </div>
 
-  <div>
-    <label>Sale price</label>
-    <input id="salePrice" class="money-input" value="4,875,000">
+  <hr>
+
+  <div class="muted">Replacement properties (up to 3)</div>
+
+  <!-- ✅ Mobile-friendly table wrapper -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th class="right">Purchase Price</th>
+          <th class="right">Mortgage</th>
+          <th class="right">Cash Invested</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Property 1</td>
+          <td class="right"><input id="p1Price" class="money-input" value="1,000,000" inputmode="decimal" autocomplete="off"></td>
+          <td class="right"><input id="p1Mort" class="money-input" value="0" inputmode="decimal" autocomplete="off"></td>
+          <td class="right mono" id="p1Cash">—</td>
+        </tr>
+        <tr>
+          <td>Property 2</td>
+          <td class="right"><input id="p2Price" class="money-input" value="0" inputmode="decimal" autocomplete="off"></td>
+          <td class="right"><input id="p2Mort" class="money-input" value="0" inputmode="decimal" autocomplete="off"></td>
+          <td class="right mono" id="p2Cash">—</td>
+        </tr>
+        <tr>
+          <td>Property 3</td>
+          <td class="right"><input id="p3Price" class="money-input" value="0" inputmode="decimal" autocomplete="off"></td>
+          <td class="right"><input id="p3Mort" class="money-input" value="0" inputmode="decimal" autocomplete="off"></td>
+          <td class="right mono" id="p3Cash">—</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
-  <div>
-    <label>Selling costs</label>
-    <input id="sellingCosts" class="money-input" value="50,000">
+  <div class="row" style="margin-top:14px;">
+    <div style="flex:1 1 100%;">
+      <button id="calcBtn">Calculate</button>
+    </div>
   </div>
-
-  <div>
-    <label>Adjusted basis - money you bought og house for</label>
-    <input id="adjustedBasis" class="money-input" value="1,650,000">
-  </div>
-
-  <div>
-    <label>Mortgage payoff</label>
-    <input id="mortgagePayoff" class="money-input" value="700,000">
-  </div>
-
-  <!-- ✅ NEW FEATURE BUTTON + OUTPUT -->
-  <div>
-    <button id="maxBtn" type="button" title="Max purchase price if you buy in cash, pay off old mortgage fully, and end with $0 cash left.">
-      Show maximum purchase
-    </button>
-    <div class="small muted" id="maxOut" style="margin-top:8px;">—</div>
-  </div>
-</div>
-
-<hr>
-
-<div class="muted">Replacement properties (up to 3)</div>
-
-<table>
-<thead>
-<tr>
-<th>Property</th>
-<th class="right">Purchase Price</th>
-<th class="right">Mortgage</th>
-<th class="right">Cash Invested</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Property 1</td>
-<td class="right"><input id="p1Price" class="money-input" value="1,000,000"></td>
-<td class="right"><input id="p1Mort" class="money-input" value="0"></td>
-<td class="right mono" id="p1Cash">—</td>
-</tr>
-<tr>
-<td>Property 2</td>
-<td class="right"><input id="p2Price" class="money-input" value="0"></td>
-<td class="right"><input id="p2Mort" class="money-input" value="0"></td>
-<td class="right mono" id="p2Cash">—</td>
-</tr>
-<tr>
-<td>Property 3</td>
-<td class="right"><input id="p3Price" class="money-input" value="0"></td>
-<td class="right"><input id="p3Mort" class="money-input" value="0"></td>
-<td class="right mono" id="p3Cash">—</td>
-</tr>
-</tbody>
-</table>
-
-<div class="row" style="margin-top:14px;">
-  <button id="calcBtn">Calculate</button>
-</div>
 
 </div>
 
 <div class="card" id="results">
-<div class="muted">Results will appear here.</div>
+  <div class="muted">Results will appear here.</div>
 </div>
 
 <script>
@@ -137,14 +200,13 @@ function getRawNumber(id) {
 function attachMoneyFormatting() {
   document.querySelectorAll('.money-input').forEach(input => {
     input.addEventListener('input', () => {
-      let cursorPosition = input.selectionStart;
+      let cursorPosition = input.selectionStart || 0;
       let originalLength = input.value.length;
 
       input.value = formatNumber(input.value);
 
       let newLength = input.value.length;
       cursorPosition += (newLength - originalLength);
-      // Guard for browsers that might throw if selection range is invalid
       try { input.setSelectionRange(cursorPosition, cursorPosition); } catch {}
     });
   });
@@ -167,24 +229,6 @@ function showMaximumPurchase() {
   const cashProceeds = netSalePrice - mortgagePayoff;
   const totalGain = netSalePrice - adjustedBasis;
 
-  // Buying in cash means:
-  // - New mortgage = 0, so mortgage boot = mortgagePayoff (full debt reduction)
-  // - Cash invested = purchase price
-  // - Cash boot = cashProceeds - purchase price (if any)
-  //
-  // We want remaining cash balance = 0 AFTER taxes,
-  // so: finalCashKept = (cashProceeds - purchasePrice) - taxes = 0
-  //
-  // Taxes depend on taxable amount:
-  // - With 1031: taxable = min(totalGain, totalBoot)
-  //   totalBoot = cashBoot + mortgageBoot
-  //            = (cashProceeds - purchasePrice) + mortgagePayoff   (when purchasePrice <= cashProceeds)
-  // - Without 1031: taxable = totalGain
-  //
-  // In the "max purchase" setup (spend as much as possible in cash),
-  // purchasePrice will be close to cashProceeds, so cashBoot >= 0 and small.
-  // We'll solve piecewise, correctly.
-
   const out = document.getElementById("maxOut");
 
   if (netSalePrice <= 0) {
@@ -205,56 +249,30 @@ function showMaximumPurchase() {
     return;
   }
 
-  // With 1031: taxable = min(totalGain, totalBoot)
-  // Here mortgageBoot = mortgagePayoff (since new mortgage = 0).
-  // cashBoot = cashProceeds - purchasePrice (assuming purchasePrice <= cashProceeds).
-  // totalBoot = (cashProceeds - purchasePrice) + mortgagePayoff.
-  //
-  // finalCashKept = (cashProceeds - purchasePrice) - taxes = 0
-  //
-  // Let x = cashBoot = cashProceeds - purchasePrice (so purchasePrice = cashProceeds - x), x >= 0.
-  //
-  // taxable = min(totalGain, x + mortgagePayoff)
-  // taxes = taxable * TAX_RATE
-  // Condition: x - taxes = 0  =>  x = taxable * TAX_RATE
-  //
-  // Solve two cases:
-  // Case A: totalGain <= x + mortgagePayoff  => taxable = totalGain
-  //         then x = totalGain * TAX_RATE
-  //         plus must satisfy totalGain <= x + mortgagePayoff
-  // Case B: totalGain > x + mortgagePayoff   => taxable = x + mortgagePayoff
-  //         then x = (x + mortgagePayoff)*TAX_RATE
-  //         => x(1 - TAX_RATE) = mortgagePayoff*TAX_RATE
-  //         => x = mortgagePayoff*TAX_RATE/(1 - TAX_RATE)
-  //         plus must satisfy totalGain > x + mortgagePayoff
-
   const gain = Math.max(0, totalGain);
 
-  // Candidate from Case B
-  const x_caseB = (mortgagePayoff * TAX_RATE) / (1 - TAX_RATE); // cash boot needed to pay taxes
+  // Case B candidate (taxable = cashBoot + mortgagePayoff)
+  const x_caseB = (mortgagePayoff * TAX_RATE) / (1 - TAX_RATE);
   const taxable_caseB = x_caseB + mortgagePayoff;
 
-  // Check Case B validity: gain > taxable_caseB
   if (gain > taxable_caseB + 1e-9) {
     const x = x_caseB;
-    const taxes = taxable_caseB * TAX_RATE; // equals x by construction
+    const taxes = taxable_caseB * TAX_RATE;
     const maxPurchase = Math.max(0, cashProceeds - x);
 
     out.innerHTML = `
       <div><strong>1031 (partial, all-cash buy):</strong> Max cash purchase ≈ <span class="mono">${money(maxPurchase)}</span></div>
-      <div class="muted">This spends everything except enough cash boot to pay taxes created by mortgage payoff boot.</div>
-      <div class="muted">Taxable ≈ ${money(taxable_caseB)} • Taxes ≈ ${money(taxes)} • Cash boot kept for taxes ≈ ${money(x)}</div>
+      <div class="muted">Spends everything except enough cash boot to pay taxes created by mortgage payoff boot.</div>
+      <div class="muted">Taxable ≈ ${money(taxable_caseB)} • Taxes ≈ ${money(taxes)} • Cash boot held for taxes ≈ ${money(x)}</div>
     `;
     return;
   }
 
-  // Otherwise Case A applies: taxable = gain, taxes = gain*TAX_RATE, x = taxes
+  // Case A (taxable = gain)
   const x = gain * TAX_RATE;
   const taxes = x;
   const maxPurchase = Math.max(0, cashProceeds - x);
 
-  // In Case A, verify condition gain <= x + mortgagePayoff holds; if not, fallback to safe display
-  // (Should hold when gain is small or mortgagePayoff is large.)
   out.innerHTML = `
     <div><strong>1031 (partial, all-cash buy):</strong> Max cash purchase ≈ <span class="mono">${money(maxPurchase)}</span></div>
     <div class="muted">Here your total gain is fully recognized (boot is large enough), so you reserve taxes on full gain.</div>
@@ -310,16 +328,18 @@ function calculate() {
   const results = document.getElementById("results");
   results.innerHTML = `
     <strong>Results</strong>
-    <table>
-      <tr><td>Net Sale Price</td><td class="right mono">${money(netSalePrice)}</td></tr>
-      <tr><td>Total Gain</td><td class="right mono">${money(totalGain)}</td></tr>
-      <tr><td>Cash Boot</td><td class="right mono">${money(cashBoot)}</td></tr>
-      <tr><td>Mortgage Boot</td><td class="right mono">${money(mortgageBoot)}</td></tr>
-      <tr><td>Total Boot</td><td class="right mono">${money(totalBoot)}</td></tr>
-      <tr><td>Taxable Amount</td><td class="right mono">${money(taxableAmount)}</td></tr>
-      <tr><td>Taxes (33%)</td><td class="right mono">${money(taxes)}</td></tr>
-      <tr><td><strong>Final Cash Kept</strong></td><td class="right mono"><strong>${money(finalCashKept)}</strong></td></tr>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <tr><td>Net Sale Price</td><td class="right mono">${money(netSalePrice)}</td></tr>
+        <tr><td>Total Gain</td><td class="right mono">${money(totalGain)}</td></tr>
+        <tr><td>Cash Boot</td><td class="right mono">${money(cashBoot)}</td></tr>
+        <tr><td>Mortgage Boot</td><td class="right mono">${money(mortgageBoot)}</td></tr>
+        <tr><td>Total Boot</td><td class="right mono">${money(totalBoot)}</td></tr>
+        <tr><td>Taxable Amount</td><td class="right mono">${money(taxableAmount)}</td></tr>
+        <tr><td>Taxes (33%)</td><td class="right mono">${money(taxes)}</td></tr>
+        <tr><td><strong>Final Cash Kept</strong></td><td class="right mono"><strong>${money(finalCashKept)}</strong></td></tr>
+      </table>
+    </div>
   `;
 }
 
